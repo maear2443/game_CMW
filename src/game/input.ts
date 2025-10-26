@@ -1,26 +1,64 @@
 import { Block, Column } from './types';
-import { TOUCH_BOX_SCALE } from './config';
+import { HAMMER_X, HAMMER_Y, PERFECT_HIT_RATIO } from './config';
 import { pointInRect, createRect } from '@/utils/rect';
 
 /**
- * 히트 테스트 - 터치/클릭 위치에 블럭이 있는지 확인
+ * 히트 테스트 - 고정 망치 위치에서 블럭 타격
+ * @returns { block: Block, isPerfect: boolean } 또는 null
  */
-export function hitTestBlock(column: Column, worldX: number, worldY: number): Block | null {
-  // 뒤에서부터 검사 (화면 앞쪽 블럭 우선)
+export function hitTestHammer(column: Column): { block: Block; isPerfect: boolean } | null {
+  // 망치 위치에 있는 블럭 찾기
   for (let i = column.blocks.length - 1; i >= 0; i--) {
     const block = column.blocks[i];
 
     if (block.removed) continue;
 
-    // 터치 박스 확대 적용
-    const expandedWidth = block.width * TOUCH_BOX_SCALE;
-    const expandedHeight = block.height * TOUCH_BOX_SCALE;
+    // 블럭의 히트박스
+    const hitBox = createRect(
+      block.sprite.x - block.width / 2,
+      block.y - block.height / 2,
+      block.width,
+      block.height
+    );
+
+    // 망치 위치가 블럭 안에 있는지 확인
+    if (pointInRect(HAMMER_X, HAMMER_Y, hitBox)) {
+      // 정확도 계산 (블럭 중심에서의 거리)
+      const centerX = block.sprite.x;
+      const centerY = block.y;
+
+      const distX = Math.abs(HAMMER_X - centerX);
+      const distY = Math.abs(HAMMER_Y - centerY);
+      const distance = Math.sqrt(distX * distX + distY * distY);
+
+      // 블럭의 반경 (가로/세로 중 작은 값의 절반)
+      const radius = Math.min(block.width, block.height) / 2;
+
+      // PERFECT 판정: 중심에서 반경의 50% 이내
+      const isPerfect = distance < radius * PERFECT_HIT_RATIO;
+
+      return { block, isPerfect };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 기존 hitTestBlock 함수 (화면 클릭 위치 기반)
+ * 현재는 사용하지 않지만 유지
+ */
+export function hitTestBlock(column: Column, worldX: number, worldY: number): Block | null {
+  for (let i = column.blocks.length - 1; i >= 0; i--) {
+    const block = column.blocks[i];
+
+    if (block.removed) continue;
 
     const hitBox = createRect(
-      block.sprite.x - expandedWidth / 2,
-      block.y - expandedHeight / 2,
-      expandedWidth,
-      expandedHeight
+      block.sprite.x - block.width / 2,
+      block.y - block.height / 2,
+      block.width,
+      block.height
     );
 
     if (pointInRect(worldX, worldY, hitBox)) {

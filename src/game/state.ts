@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 import { GameState, Column, ScoreState, GameConfig, GameAssets } from './types';
 import { GAME_DURATION, SAFE_LINE_Y, difficultyAt, BLOCK_WIDTH, BLOCK_HEIGHT } from './config';
 import { initRng } from '@/engine/rng';
-import { app, gameContainer, screenToWorld } from '@/engine/app';
+import { app, gameContainer } from '@/engine/app';
 import {
   createColumn,
   moveColumn,
@@ -15,7 +15,8 @@ import {
   initBlockPool,
 } from './column';
 import { createScoreState, applyScore } from './scoring';
-import { hitTestBlock } from './input';
+import { hitTestHammer } from './input';
+import { HAMMER_X, HAMMER_Y } from './config';
 import { HUD } from './ui/hud';
 import { MenuUI } from './ui/menu';
 import { ResultUI } from './ui/result';
@@ -68,23 +69,58 @@ export class GameController {
   }
 
   /**
-   * 플레이스홀더 에셋 생성 (실제로는 이미지 로드)
+   * 플레이스홀더 에셋 생성 (원통형 블럭)
    */
   private createPlaceholderAssets(): GameAssets {
-    // 양품 블럭 (초록)
+    // 양품 블럭 (파란색 원통)
     const goodGraphics = new PIXI.Graphics();
-    goodGraphics.beginFill(0x00ff00);
-    goodGraphics.lineStyle(3, 0x00aa00);
-    goodGraphics.drawRoundedRect(0, 0, BLOCK_WIDTH, BLOCK_HEIGHT, 10);
+
+    // 타원형 상단
+    goodGraphics.beginFill(0x0088ff);
+    goodGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
     goodGraphics.endFill();
+
+    // 원통 본체
+    goodGraphics.beginFill(0x0066cc);
+    goodGraphics.drawRect(5, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH - 10, BLOCK_HEIGHT * 0.6);
+    goodGraphics.endFill();
+
+    // 타원형 하단 (그림자)
+    goodGraphics.beginFill(0x004488);
+    goodGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.8, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
+    goodGraphics.endFill();
+
+    // 테두리
+    goodGraphics.lineStyle(2, 0x0044aa);
+    goodGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
+
     const blockGood = app.renderer.generateTexture(goodGraphics);
 
-    // 불량 블럭 (빨강)
+    // 불량 블럭 (빨간색 원통)
     const badGraphics = new PIXI.Graphics();
-    badGraphics.beginFill(0xff0000);
-    badGraphics.lineStyle(3, 0xaa0000);
-    badGraphics.drawRoundedRect(0, 0, BLOCK_WIDTH, BLOCK_HEIGHT, 10);
+
+    // 타원형 상단
+    badGraphics.beginFill(0xff3333);
+    badGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
     badGraphics.endFill();
+
+    // 원통 본체
+    badGraphics.beginFill(0xcc0000);
+    badGraphics.drawRect(5, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH - 10, BLOCK_HEIGHT * 0.6);
+    badGraphics.endFill();
+
+    // 타원형 하단 (그림자)
+    badGraphics.beginFill(0x880000);
+    badGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.8, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
+    badGraphics.endFill();
+
+    // 금 표시 (X 마크)
+    badGraphics.lineStyle(4, 0x000000);
+    badGraphics.moveTo(BLOCK_WIDTH * 0.3, BLOCK_HEIGHT * 0.4);
+    badGraphics.lineTo(BLOCK_WIDTH * 0.7, BLOCK_HEIGHT * 0.6);
+    badGraphics.moveTo(BLOCK_WIDTH * 0.7, BLOCK_HEIGHT * 0.4);
+    badGraphics.lineTo(BLOCK_WIDTH * 0.3, BLOCK_HEIGHT * 0.6);
+
     const blockBad = app.renderer.generateTexture(badGraphics);
 
     return { blockGood, blockBad };
@@ -149,6 +185,9 @@ export class GameController {
     this.hud = new HUD();
     this.uiLayer.addChild(this.hud.getContainer());
 
+    // 망치 위치 마커 추가
+    this.addHammerMarker();
+
     // 입력 설정
     this.setupInput();
 
@@ -158,31 +197,76 @@ export class GameController {
   }
 
   /**
-   * 입력 설정
+   * 망치 위치 마커 추가
+   */
+  private addHammerMarker(): void {
+    const marker = new PIXI.Graphics();
+
+    // 반투명 원형 마커
+    marker.beginFill(0xffffff, 0.3);
+    marker.drawCircle(0, 0, 50);
+    marker.endFill();
+
+    // 십자선
+    marker.lineStyle(3, 0xffffff, 0.8);
+    marker.moveTo(-30, 0);
+    marker.lineTo(30, 0);
+    marker.moveTo(0, -30);
+    marker.lineTo(0, 30);
+
+    // 중심점
+    marker.beginFill(0xff0000);
+    marker.drawCircle(0, 0, 5);
+    marker.endFill();
+
+    marker.x = HAMMER_X;
+    marker.y = HAMMER_Y;
+
+    this.uiLayer.addChild(marker);
+  }
+
+  /**
+   * 입력 설정 (화면 어디든 클릭 가능, 망치 위치에서 타격)
    */
   private setupInput(): void {
     const canvas = app.view as HTMLCanvasElement;
 
-    const handlePointerDown = (event: PointerEvent) => {
+    const handlePointerDown = (_event: PointerEvent) => {
       if (this.state !== 'PLAYING' || !this.column) return;
 
-      const world = screenToWorld(event.clientX, event.clientY);
-      const hit = hitTestBlock(this.column, world.x, world.y);
+      // 망치 위치에 있는 블럭 확인
+      const result = hitTestHammer(this.column);
 
-      if (!hit) return;
+      if (!result) return;
 
-      if (hit.type === 'BAD') {
+      const { block, isPerfect } = result;
+
+      if (block.type === 'BAD') {
         // 불량 블럭 제거 성공
-        removeBlock(hit, this.column);
-        const scoreDelta = applyScore(this.scoreState, 'BAD_HIT', this.config);
+        removeBlock(block, this.column);
+
+        // 정확도에 따라 점수 차등 지급
+        const baseScore = this.config.s2BadHit;
+        const scoreDelta = isPerfect ? baseScore : Math.floor(baseScore / 2);
+
+        this.scoreState.score += scoreDelta;
+        this.scoreState.badRemoved++;
+        this.scoreState.combo++;
+        this.scoreState.totalJudgements++;
+
+        // 최대 콤보 갱신
+        if (this.scoreState.combo > this.scoreState.maxCombo) {
+          this.scoreState.maxCombo = this.scoreState.combo;
+        }
+
         playSfx('hit_bad');
-        this.showScorePop(world.x, world.y, scoreDelta, 0x00ff00);
+        this.showHitPop(isPerfect, scoreDelta, 0x00ff00);
       } else {
         // 양품 오제거 (실수)
-        removeBlock(hit, this.column);
+        removeBlock(block, this.column);
         const scoreDelta = applyScore(this.scoreState, 'GOOD_HIT', this.config);
         playSfx('hit_miss');
-        this.showScorePop(world.x, world.y, scoreDelta, 0xff0000);
+        this.showHitPop(false, scoreDelta, 0xff0000);
         this.screenFlashRed();
       }
     };
@@ -194,34 +278,52 @@ export class GameController {
   }
 
   /**
-   * 점수 팝업 표시
+   * 히트 팝업 표시 (PERFECT/GOOD + 점수)
    */
-  private showScorePop(x: number, y: number, score: number, color: number): void {
-    const text = new PIXI.Text(score > 0 ? `+${score}` : `${score}`, {
+  private showHitPop(isPerfect: boolean, score: number, color: number): void {
+    // 판정 텍스트
+    const judgement = new PIXI.Text(isPerfect ? 'PERFECT!' : 'GOOD', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: 24,
+      fontSize: isPerfect ? 48 : 36,
+      fill: isPerfect ? 0xffd700 : 0xffffff,
+      fontWeight: 'bold',
+    });
+    judgement.anchor.set(0.5);
+    judgement.x = HAMMER_X;
+    judgement.y = HAMMER_Y - 100;
+    this.gameLayer.addChild(judgement);
+
+    // 점수 텍스트
+    const scoreText = new PIXI.Text(score > 0 ? `+${score}` : `${score}`, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: 32,
       fill: color,
       fontWeight: 'bold',
     });
-    text.anchor.set(0.5);
-    text.x = x;
-    text.y = y;
-    this.gameLayer.addChild(text);
+    scoreText.anchor.set(0.5);
+    scoreText.x = HAMMER_X;
+    scoreText.y = HAMMER_Y - 50;
+    this.gameLayer.addChild(scoreText);
 
     // 애니메이션
     const startTime = performance.now();
-    const duration = 600;
+    const duration = 800;
 
     const animate = () => {
       const elapsed = performance.now() - startTime;
       const progress = elapsed / duration;
 
       if (progress < 1) {
-        text.y = y - progress * 50;
-        text.alpha = 1 - progress;
+        judgement.y = HAMMER_Y - 100 - progress * 60;
+        judgement.alpha = 1 - progress;
+
+        scoreText.y = HAMMER_Y - 50 - progress * 40;
+        scoreText.alpha = 1 - progress;
+
         requestAnimationFrame(animate);
       } else {
-        text.destroy();
+        judgement.destroy();
+        scoreText.destroy();
       }
     };
 

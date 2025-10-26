@@ -12,6 +12,13 @@ export const SPAWN_MARGIN = 200; // 화면 위 여유 공간
 // 터치 박스 확대 (실제 블럭보다 1.2배 크게)
 export const TOUCH_BOX_SCALE = 1.2;
 
+// 망치 고정 위치
+export const HAMMER_X = LOGICAL_WIDTH / 2;  // 화면 중앙
+export const HAMMER_Y = LOGICAL_HEIGHT - 250; // 하단에서 250px 위
+
+// 정확도 판정 (블럭 중심에서의 거리 비율)
+export const PERFECT_HIT_RATIO = 0.5;  // 블럭 반경의 50% 이내
+
 // 콤보 보너스
 export const COMBO_TIERS = [
   { threshold: 5, bonus: 5 },

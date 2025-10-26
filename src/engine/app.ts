@@ -8,6 +8,8 @@ export let gameContainer: PIXI.Container;
  * PixiJS 앱 초기화
  */
 export async function initApp(): Promise<void> {
+  console.log('Creating PIXI Application...');
+
   app = new PIXI.Application({
     width: LOGICAL_WIDTH,
     height: LOGICAL_HEIGHT,
@@ -17,16 +19,23 @@ export async function initApp(): Promise<void> {
     antialias: true,
   });
 
+  console.log('PIXI Application created', app);
+
   // 캔버스를 DOM에 추가
-  document.body.appendChild(app.view as HTMLCanvasElement);
+  const canvas = app.view as HTMLCanvasElement;
+  console.log('Canvas element:', canvas);
+  document.body.appendChild(canvas);
+  console.log('Canvas added to DOM');
 
   // 게임 컨테이너 생성
   gameContainer = new PIXI.Container();
   app.stage.addChild(gameContainer);
+  console.log('Game container added to stage');
 
   // 리사이즈 핸들러 설정
   window.addEventListener('resize', handleResize);
   handleResize();
+  console.log('Resize handler set up');
 }
 
 /**
