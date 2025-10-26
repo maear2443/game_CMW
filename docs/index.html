@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="1분 동안 불량 블럭만 제거하라! 정확하고 빠를수록 높은 점수!" />
+    <meta name="theme-color" content="#1a1a2e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Totem Drop" />
+
+    <title>Totem Drop - 1분 아케이드 게임</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/game_CMW/manifest.json" />
+
+    <!-- Favicon (추후 추가) -->
+    <!-- <link rel="icon" type="image/png" href="/favicon.png" /> -->
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: #1a1a2e;
+        font-family: 'Arial', sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      canvas {
+        display: block;
+        touch-action: none;
+      }
+
+      /* 로딩 화면 */
+      #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #ffffff;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+      }
+
+      #loading.hidden {
+        display: none;
+      }
+
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #4ecdc4;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+    <script type="module" crossorigin src="/game_CMW/assets/index-BEAEvNop.js"></script>
+    <link rel="modulepreload" crossorigin href="/game_CMW/assets/pixi-CpI4DXgc.js">
+  </head>
+  <body>
+    <div id="loading">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+      <p id="loading-percent" style="font-size: 14px; margin-top: 10px; color: #4ecdc4;">0%</p>
+    </div>
+
+    <!-- Module preload for faster loading -->
+    <link rel="modulepreload" href="data:video/mp2t;base64,aW1wb3J0IHsgaW5pdEFwcCB9IGZyb20gJy4vZW5naW5lL2FwcCc7CmltcG9ydCB7IEdhbWVDb250cm9sbGVyIH0gZnJvbSAnLi9nYW1lL3N0YXRlJzsKCi8qKgogKiDroZzrlKkg7KeE7ZaJ66WgIOyXheuNsOydtO2KuAogKi8KZnVuY3Rpb24gdXBkYXRlTG9hZGluZ1Byb2dyZXNzKHBlcmNlbnQ6IG51bWJlcik6IHZvaWQgewogIGNvbnN0IHBlcmNlbnRFbCA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCdsb2FkaW5nLXBlcmNlbnQnKTsKICBpZiAocGVyY2VudEVsKSB7CiAgICBwZXJjZW50RWwudGV4dENvbnRlbnQgPSBgJHtNYXRoLnJvdW5kKHBlcmNlbnQpfSVgOwogIH0KfQoKLyoqCiAqIOuplOyduCDsp4TsnoXsoJAKICovCmFzeW5jIGZ1bmN0aW9uIG1haW4oKSB7CiAgdHJ5IHsKICAgIGNvbnNvbGUubG9nKCfqsozsnoQg7LSI6riw7ZmUIOyLnOyekS4uLicpOwogICAgdXBkYXRlTG9hZGluZ1Byb2dyZXNzKDEwKTsKCiAgICAvLyBQaXhpSlMg7JWxIOy0iOq4sO2ZlAogICAgdXBkYXRlTG9hZGluZ1Byb2dyZXNzKDMwKTsKICAgIGF3YWl0IGluaXRBcHAoKTsKICAgIGNvbnNvbGUubG9nKCdQaXhpSlMg7JWxIOy0iOq4sO2ZlCDsmYTro4whJyk7CiAgICB1cGRhdGVMb2FkaW5nUHJvZ3Jlc3MoNzApOwoKICAgIC8vIOqyjOyehCDsu6jtirjroaTrn6wg7IOd7ISxIOuwjyDsi5zsnpEKICAgIGNvbnN0IGdhbWUgPSBuZXcgR2FtZUNvbnRyb2xsZXIoKTsKICAgIHVwZGF0ZUxvYWRpbmdQcm9ncmVzcyg5MCk7CiAgICBnYW1lLnN0YXJ0TWVudSgpOwoKICAgIGNvbnNvbGUubG9nKCdUb3RlbSBEcm9wIOqyjOyehCDsi5zsnpEhJyk7CiAgICB1cGRhdGVMb2FkaW5nUHJvZ3Jlc3MoMTAwKTsKCiAgICAvLyDroZzrlKkg7ZmU66m0IOygnOqxsAogICAgaWYgKCh3aW5kb3cgYXMgYW55KS5oaWRlTG9hZGluZykgewogICAgICAod2luZG93IGFzIGFueSkuaGlkZUxvYWRpbmcoKTsKICAgIH0KICB9IGNhdGNoIChlcnJvcikgewogICAgY29uc29sZS5lcnJvcign6rKM7J6EIOy0iOq4sO2ZlCDsi6TtjKg6JywgZXJyb3IpOwoKICAgIC8vIOuhnOuUqSDtmZTrqbQg7KCc6rGwCiAgICBpZiAoKHdpbmRvdyBhcyBhbnkpLmhpZGVMb2FkaW5nKSB7CiAgICAgICh3aW5kb3cgYXMgYW55KS5oaWRlTG9hZGluZygpOwogICAgfQoKICAgIC8vIOyXkOufrOulvCDtmZTrqbTsl5Ag7ZGc7IucCiAgICBkb2N1bWVudC5ib2R5LmlubmVySFRNTCA9IGAKICAgICAgPGRpdiBzdHlsZT0iY29sb3I6IHdoaXRlOyBwYWRkaW5nOiAyMHB4OyBmb250LWZhbWlseTogQXJpYWw7Ij4KICAgICAgICA8aDE+6rKM7J6EIOuhnOuTnCDsi6TtjKg8L2gxPgogICAgICAgIDxwcmU+JHtlcnJvciBpbnN0YW5jZW9mIEVycm9yID8gZXJyb3IubWVzc2FnZSA6IFN0cmluZyhlcnJvcil9PC9wcmU+CiAgICAgICAgPHByZT4ke2Vycm9yIGluc3RhbmNlb2YgRXJyb3IgPyBlcnJvci5zdGFjayA6ICcnfTwvcHJlPgogICAgICAgIDxwPuy9mOyGlOydhCDtmZXsnbjtlbTso7zshLjsmpQuPC9wPgogICAgICA8L2Rpdj4KICAgIGA7CiAgfQp9CgovLyDslbEg7Iuc7J6RCm1haW4oKTsK" />
+
+
+    <script>
+      // 로딩 화면 제거 함수를 전역으로 노출
+      window.hideLoading = function() {
+        const loading = document.getElementById('loading');
+        if (loading) {
+          console.log('로딩 화면 제거');
+          loading.classList.add('hidden');
+        }
+      };
+
+      // Service Worker 등록 (PWA)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then(reg => console.log('Service Worker 등록 성공:', reg.scope))
+            .catch(err => console.warn('Service Worker 등록 실패:', err));
+        });
+      }
+
+      // 모바일 스크롤 방지
+      document.addEventListener('touchmove', (e) => {
+        if (e.target.tagName !== 'CANVAS') return;
+        e.preventDefault();
+      }, { passive: false });
+    </script>
+  </body>
+</html>

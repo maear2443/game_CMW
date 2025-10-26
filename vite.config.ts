@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
+  // GitHub Pages base path (repository name)
+  base: process.env.NODE_ENV === 'production' ? '/game_CMW/' : '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
