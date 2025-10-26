@@ -20,7 +20,7 @@ import { HAMMER_X, HAMMER_Y } from './config';
 import { HUD } from './ui/hud';
 import { MenuUI } from './ui/menu';
 import { ResultUI } from './ui/result';
-import { initAudio, playSfx } from './sound';
+import { initAudio, playSfx, playHitSound } from './sound';
 import { submitScore } from '@/net/api';
 
 /**
@@ -46,6 +46,8 @@ export class GameController {
   private assets: GameAssets;
 
   private updateBound: ((delta: number) => void) | null = null;
+
+  private hammerMarker: PIXI.Graphics | null = null;
 
   constructor() {
     this.config = difficultyAt(0);
@@ -200,29 +202,68 @@ export class GameController {
    * 망치 위치 마커 추가
    */
   private addHammerMarker(): void {
-    const marker = new PIXI.Graphics();
+    this.hammerMarker = new PIXI.Graphics();
 
     // 반투명 원형 마커
-    marker.beginFill(0xffffff, 0.3);
-    marker.drawCircle(0, 0, 50);
-    marker.endFill();
+    this.hammerMarker.beginFill(0xffffff, 0.3);
+    this.hammerMarker.drawCircle(0, 0, 50);
+    this.hammerMarker.endFill();
 
     // 십자선
-    marker.lineStyle(3, 0xffffff, 0.8);
-    marker.moveTo(-30, 0);
-    marker.lineTo(30, 0);
-    marker.moveTo(0, -30);
-    marker.lineTo(0, 30);
+    this.hammerMarker.lineStyle(3, 0xffffff, 0.8);
+    this.hammerMarker.moveTo(-30, 0);
+    this.hammerMarker.lineTo(30, 0);
+    this.hammerMarker.moveTo(0, -30);
+    this.hammerMarker.lineTo(0, 30);
 
     // 중심점
-    marker.beginFill(0xff0000);
-    marker.drawCircle(0, 0, 5);
-    marker.endFill();
+    this.hammerMarker.beginFill(0xff0000);
+    this.hammerMarker.drawCircle(0, 0, 5);
+    this.hammerMarker.endFill();
 
-    marker.x = HAMMER_X;
-    marker.y = HAMMER_Y;
+    this.hammerMarker.x = HAMMER_X;
+    this.hammerMarker.y = HAMMER_Y;
 
-    this.uiLayer.addChild(marker);
+    this.uiLayer.addChild(this.hammerMarker);
+  }
+
+  /**
+   * 망치 타격 애니메이션
+   */
+  private animateHammer(): void {
+    if (!this.hammerMarker) return;
+
+    const originalY = HAMMER_Y;
+    const downDistance = 30;
+    const duration = 150; // ms
+    const startTime = performance.now();
+
+    const animate = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      if (progress < 0.5) {
+        // 내려가기
+        const t = progress * 2;
+        this.hammerMarker!.y = originalY + downDistance * this.easeOutQuad(t);
+      } else {
+        // 올라오기
+        const t = (progress - 0.5) * 2;
+        this.hammerMarker!.y = originalY + downDistance * (1 - this.easeOutQuad(t));
+      }
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        this.hammerMarker!.y = originalY;
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  private easeOutQuad(t: number): number {
+    return t * (2 - t);
   }
 
   /**
@@ -233,6 +274,9 @@ export class GameController {
 
     const handlePointerDown = (_event: PointerEvent) => {
       if (this.state !== 'PLAYING' || !this.column) return;
+
+      // 망치 애니메이션 실행
+      this.animateHammer();
 
       // 망치 위치에 있는 블럭 확인
       const result = hitTestHammer(this.column);
@@ -259,8 +303,13 @@ export class GameController {
           this.scoreState.maxCombo = this.scoreState.combo;
         }
 
-        playSfx('hit_bad');
+        playHitSound(isPerfect);
         this.showHitPop(isPerfect, scoreDelta, 0x00ff00);
+
+        // PERFECT 타격 시 파티클 이펙트
+        if (isPerfect) {
+          this.showParticles(HAMMER_X, HAMMER_Y);
+        }
       } else {
         // 양품 오제거 (실수)
         removeBlock(block, this.column);
@@ -328,6 +377,55 @@ export class GameController {
     };
 
     requestAnimationFrame(animate);
+  }
+
+  /**
+   * 파티클 이펙트 (PERFECT 타격 시)
+   */
+  private showParticles(x: number, y: number): void {
+    const particleCount = 20;
+    const colors = [0xffd700, 0xffff00, 0xffa500, 0xffffff];
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = new PIXI.Graphics();
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const size = 3 + Math.random() * 4;
+
+      particle.beginFill(color);
+      particle.drawCircle(0, 0, size);
+      particle.endFill();
+
+      particle.x = x;
+      particle.y = y;
+
+      this.gameLayer.addChild(particle);
+
+      // 랜덤 방향과 속도
+      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.3;
+      const speed = 2 + Math.random() * 4;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+
+      const startTime = performance.now();
+      const duration = 600 + Math.random() * 400;
+
+      const animate = () => {
+        const elapsed = performance.now() - startTime;
+        const progress = elapsed / duration;
+
+        if (progress < 1) {
+          particle.x += vx;
+          particle.y += vy;
+          particle.alpha = 1 - progress;
+
+          requestAnimationFrame(animate);
+        } else {
+          particle.destroy();
+        }
+      };
+
+      requestAnimationFrame(animate);
+    }
   }
 
   /**

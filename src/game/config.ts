@@ -26,16 +26,16 @@ export const COMBO_TIERS = [
   { threshold: 20, bonus: 40 },
 ];
 
-// 난이도 단계별 설정
+// 난이도 단계별 설정 (밸런스 조정)
 export const DIFFICULTY_PHASES: DifficultyPhase[] = [
   {
     startTime: 0,
     config: {
-      speedPxPerSec: 100,
+      speedPxPerSec: 80,  // 느리게 시작
       spawnGapPx: 0,
-      badRate: 0.3,
+      badRate: 0.4,  // 불량 비율 증가 (연습용)
       s1GoodPass: 5,
-      s2BadHit: 8,
+      s2BadHit: 8,  // PERFECT 시 8점, GOOD 시 4점
       p1BadPass: -10,
       p2GoodHit: -12,
     },
@@ -43,9 +43,9 @@ export const DIFFICULTY_PHASES: DifficultyPhase[] = [
   {
     startTime: 15,
     config: {
-      speedPxPerSec: 110,
+      speedPxPerSec: 100,  // 중간 속도
       spawnGapPx: 0,
-      badRate: 0.4,
+      badRate: 0.45,
       s1GoodPass: 5,
       s2BadHit: 8,
       p1BadPass: -10,
@@ -55,24 +55,24 @@ export const DIFFICULTY_PHASES: DifficultyPhase[] = [
   {
     startTime: 35,
     config: {
-      speedPxPerSec: 120,
+      speedPxPerSec: 120,  // 빨라짐
       spawnGapPx: 0,
       badRate: 0.5,
       s1GoodPass: 5,
-      s2BadHit: 9,
+      s2BadHit: 10,  // 점수 증가
       p1BadPass: -12,
       p2GoodHit: -12,
     },
   },
   {
-    startTime: 55,
+    startTime: 50,  // 마지막 10초 더 어렵게
     config: {
-      speedPxPerSec: 130,
+      speedPxPerSec: 150,  // 매우 빠름
       spawnGapPx: 0,
-      badRate: 0.6,
+      badRate: 0.55,
       s1GoodPass: 6,
-      s2BadHit: 10,
-      p1BadPass: -12,
+      s2BadHit: 12,  // 고득점
+      p1BadPass: -15,
       p2GoodHit: -14,
     },
   },
