@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { GameState, Column, ScoreState, GameConfig, GameAssets } from './types';
-import { GAME_DURATION, SAFE_LINE_Y, difficultyAt, BLOCK_WIDTH, BLOCK_HEIGHT, getSpeedMultiplier } from './config';
+import { GAME_DURATION, SAFE_LINE_Y, difficultyAt, getSpeedMultiplier } from './config';
 import { initRng } from '@/engine/rng';
 import { app, gameContainer } from '@/engine/app';
 import {
@@ -22,6 +22,7 @@ import { HUD } from './ui/hud';
 import { MenuUI } from './ui/menu';
 import { ResultUI } from './ui/result';
 import { initAudio, playSfx, playHitSound } from './sound';
+import { loadGameAssets } from './assets';
 
 /**
  * 게임 컨트롤러
@@ -60,72 +61,21 @@ export class GameController {
     gameContainer.addChild(this.gameLayer);
     gameContainer.addChild(this.uiLayer);
 
-    // 임시 에셋 (실제로는 로드 필요)
-    this.assets = this.createPlaceholderAssets();
-
-    // 블럭 풀 초기화
-    initBlockPool(this.assets);
+    // 에셋 로드 (비동기) - 로드 완료 후 블럭 풀 초기화
+    this.assets = { blockGood: PIXI.Texture.EMPTY, blockBad: PIXI.Texture.EMPTY };
+    this.loadAssets();
 
     // 첫 터치 시 오디오 초기화
     this.setupFirstTouch();
   }
 
   /**
-   * 플레이스홀더 에셋 생성 (원통형 블럭)
+   * 게임 에셋 로드
    */
-  private createPlaceholderAssets(): GameAssets {
-    // 양품 블럭 (파란색 원통)
-    const goodGraphics = new PIXI.Graphics();
-
-    // 타원형 상단
-    goodGraphics.beginFill(0x0088ff);
-    goodGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
-    goodGraphics.endFill();
-
-    // 원통 본체
-    goodGraphics.beginFill(0x0066cc);
-    goodGraphics.drawRect(5, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH - 10, BLOCK_HEIGHT * 0.6);
-    goodGraphics.endFill();
-
-    // 타원형 하단 (그림자)
-    goodGraphics.beginFill(0x004488);
-    goodGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.8, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
-    goodGraphics.endFill();
-
-    // 테두리
-    goodGraphics.lineStyle(2, 0x0044aa);
-    goodGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
-
-    const blockGood = app.renderer.generateTexture(goodGraphics);
-
-    // 불량 블럭 (빨간색 원통)
-    const badGraphics = new PIXI.Graphics();
-
-    // 타원형 상단
-    badGraphics.beginFill(0xff3333);
-    badGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
-    badGraphics.endFill();
-
-    // 원통 본체
-    badGraphics.beginFill(0xcc0000);
-    badGraphics.drawRect(5, BLOCK_HEIGHT * 0.2, BLOCK_WIDTH - 10, BLOCK_HEIGHT * 0.6);
-    badGraphics.endFill();
-
-    // 타원형 하단 (그림자)
-    badGraphics.beginFill(0x880000);
-    badGraphics.drawEllipse(BLOCK_WIDTH / 2, BLOCK_HEIGHT * 0.8, BLOCK_WIDTH / 2 - 5, BLOCK_HEIGHT * 0.15);
-    badGraphics.endFill();
-
-    // 금 표시 (X 마크)
-    badGraphics.lineStyle(4, 0x000000);
-    badGraphics.moveTo(BLOCK_WIDTH * 0.3, BLOCK_HEIGHT * 0.4);
-    badGraphics.lineTo(BLOCK_WIDTH * 0.7, BLOCK_HEIGHT * 0.6);
-    badGraphics.moveTo(BLOCK_WIDTH * 0.7, BLOCK_HEIGHT * 0.4);
-    badGraphics.lineTo(BLOCK_WIDTH * 0.3, BLOCK_HEIGHT * 0.6);
-
-    const blockBad = app.renderer.generateTexture(badGraphics);
-
-    return { blockGood, blockBad };
+  private async loadAssets(): Promise<void> {
+    this.assets = await loadGameAssets();
+    initBlockPool(this.assets);
+    console.log('✓ 게임 준비 완료');
   }
 
   /**
