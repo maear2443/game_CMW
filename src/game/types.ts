@@ -61,8 +61,8 @@ export interface LeaderboardEntry {
 }
 
 export interface GameAssets {
-  blockGood: PIXI.Texture;
-  blockBad: PIXI.Texture;
+  blockGood: PIXI.Texture[];  // 양품 블럭 디자인 배열 (최대 5개)
+  blockBad: PIXI.Texture[];   // 불량 블럭 디자인 배열 (최대 5개)
   hammer?: PIXI.Texture;
   // 추후 확장: 파티클, 이펙트 등
 }

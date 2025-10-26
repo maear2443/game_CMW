@@ -64,24 +64,46 @@ function createPlaceholderBlock(isGood: boolean): PIXI.Texture {
 }
 
 /**
- * 게임 에셋 로드
+ * 게임 에셋 로드 (5개 디자인씩)
  */
 export async function loadGameAssets(): Promise<GameAssets> {
   console.log('🎨 게임 에셋 로딩 시작...');
 
-  // 이미지 로드 시도
-  const blockGoodImage = await tryLoadImage('/assets/images/block_good.png');
-  const blockBadImage = await tryLoadImage('/assets/images/block_bad.png');
+  const blockGoodTextures: PIXI.Texture[] = [];
+  const blockBadTextures: PIXI.Texture[] = [];
 
-  // 로드 실패 시 코드로 생성
-  const blockGood = blockGoodImage || createPlaceholderBlock(true);
-  const blockBad = blockBadImage || createPlaceholderBlock(false);
+  // 양품 블럭 1~5 로드 시도
+  for (let i = 1; i <= 5; i++) {
+    const texture = await tryLoadImage(`/assets/images/block_good_${i}.png`);
+    if (texture) {
+      blockGoodTextures.push(texture);
+    }
+  }
 
-  console.log('✓ 게임 에셋 로딩 완료');
+  // 불량 블럭 1~5 로드 시도
+  for (let i = 1; i <= 5; i++) {
+    const texture = await tryLoadImage(`/assets/images/block_bad_${i}.png`);
+    if (texture) {
+      blockBadTextures.push(texture);
+    }
+  }
+
+  // 로드된 이미지가 없으면 fallback 생성
+  if (blockGoodTextures.length === 0) {
+    console.log('양품 이미지 없음 - fallback 사용');
+    blockGoodTextures.push(createPlaceholderBlock(true));
+  }
+
+  if (blockBadTextures.length === 0) {
+    console.log('불량 이미지 없음 - fallback 사용');
+    blockBadTextures.push(createPlaceholderBlock(false));
+  }
+
+  console.log(`✓ 게임 에셋 로딩 완료 (양품: ${blockGoodTextures.length}개, 불량: ${blockBadTextures.length}개)`);
 
   return {
-    blockGood,
-    blockBad,
+    blockGood: blockGoodTextures,
+    blockBad: blockBadTextures,
   };
 }
 

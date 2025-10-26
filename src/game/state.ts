@@ -62,7 +62,7 @@ export class GameController {
     gameContainer.addChild(this.uiLayer);
 
     // 에셋 로드 (비동기) - 로드 완료 후 블럭 풀 초기화
-    this.assets = { blockGood: PIXI.Texture.EMPTY, blockBad: PIXI.Texture.EMPTY };
+    this.assets = { blockGood: [PIXI.Texture.EMPTY], blockBad: [PIXI.Texture.EMPTY] };
     this.loadAssets();
 
     // 첫 터치 시 오디오 초기화

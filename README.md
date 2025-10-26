@@ -39,9 +39,21 @@
 public/assets/images/
 ```
 
-#### 필요한 파일
-- `block_good.png` - 양품 블럭 (파란색 원통형)
-- `block_bad.png` - 불량 블럭 (빨간색 원통형 + X표시)
+#### 필요한 파일 (최대 5개씩)
+
+**양품 블럭**
+- `block_good_1.png` - 양품 디자인 1
+- `block_good_2.png` - 양품 디자인 2
+- `block_good_3.png` - 양품 디자인 3
+- `block_good_4.png` - 양품 디자인 4
+- `block_good_5.png` - 양품 디자인 5
+
+**불량 블럭**
+- `block_bad_1.png` - 불량 디자인 1
+- `block_bad_2.png` - 불량 디자인 2
+- `block_bad_3.png` - 불량 디자인 3
+- `block_bad_4.png` - 불량 디자인 4
+- `block_bad_5.png` - 불량 디자인 5
 
 #### 이미지 규격
 - **크기**: 120x120 픽셀
@@ -51,11 +63,14 @@ public/assets/images/
   - 밝은 색상 (가독성)
   - 외곽선 추가 (명확한 구분)
   - 그림자 효과 (입체감)
+  - **각 디자인마다 다른 패턴/색상** (다양성)
 
 #### 교체 방법
 1. 이미지 파일을 `public/assets/images/` 폴더에 복사
-2. 파일명을 정확히 `block_good.png`, `block_bad.png`로 저장
-3. 게임을 빌드하고 새로고침
+2. 파일명을 정확히 `block_good_1.png` ~ `block_good_5.png` 형식으로 저장
+3. **1개만 추가해도 되고, 5개 모두 추가해도 됩니다!**
+4. 게임에서 **랜덤하게 선택**되어 표시됩니다
+5. 빌드하고 새로고침
 
 ```bash
 npm run build
@@ -170,8 +185,8 @@ game_CMW/
 │   ├── assets/
 │   │   ├── images/      # 🎨 이미지 파일 (교체 가능)
 │   │   │   ├── README.md
-│   │   │   ├── block_good.png (선택)
-│   │   │   └── block_bad.png (선택)
+│   │   │   ├── block_good_1~5.png (선택, 최대 5개)
+│   │   │   └── block_bad_1~5.png (선택, 최대 5개)
 │   │   └── sounds/      # 🔊 사운드 파일 (교체 가능)
 │   │       ├── README.md
 │   │       ├── bgm_*.mp3 (선택)

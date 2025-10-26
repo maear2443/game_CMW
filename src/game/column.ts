@@ -9,6 +9,13 @@ let blockPool: ObjectPool<Block> | null = null;
 let lastBlockTypes: BlockType[] = []; // 최근 생성된 블럭 타입 (연속 3회 방지용)
 
 /**
+ * 배열에서 랜덤으로 하나 선택
+ */
+function randomChoice<T>(array: T[]): T {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+/**
  * 블럭 풀 초기화
  */
 export function initBlockPool(assets: GameAssets): void {
@@ -99,7 +106,10 @@ export function fillInitialBlocks(
     block.id = blockIdCounter++;
     block.type = type;
     block.y = currentY;
-    block.sprite.texture = type === 'GOOD' ? assets.blockGood : assets.blockBad;
+    // 랜덤으로 텍스처 선택
+    block.sprite.texture = type === 'GOOD'
+      ? randomChoice(assets.blockGood)
+      : randomChoice(assets.blockBad);
     block.sprite.x = BLOCK_WIDTH / 2 + 210;
     block.sprite.y = block.y;
     block.sprite.visible = true;
@@ -166,7 +176,10 @@ export function spawnBlock(
   block.id = blockIdCounter++;
   block.type = type;
   block.y = column.spawnCursorY - BLOCK_HEIGHT / 2;
-  block.sprite.texture = type === 'GOOD' ? assets.blockGood : assets.blockBad;
+  // 랜덤으로 텍스처 선택
+  block.sprite.texture = type === 'GOOD'
+    ? randomChoice(assets.blockGood)
+    : randomChoice(assets.blockBad);
   block.sprite.x = BLOCK_WIDTH / 2 + 210; // 중앙 정렬 (540/2 - 120/2 + 120/2)
   block.sprite.y = block.y;
   block.sprite.visible = true;
