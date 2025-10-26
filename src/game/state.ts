@@ -21,7 +21,6 @@ import { HUD } from './ui/hud';
 import { MenuUI } from './ui/menu';
 import { ResultUI } from './ui/result';
 import { initAudio, playSfx, playHitSound } from './sound';
-import { submitScore } from '@/net/api';
 
 /**
  * 게임 컨트롤러
@@ -518,15 +517,6 @@ export class GameController {
 
     // 결과 화면 표시
     this.showResult();
-
-    // 점수 제출
-    submitScore(this.scoreState).then((success) => {
-      if (success) {
-        console.log('점수 제출 성공');
-      } else {
-        console.warn('점수 제출 실패');
-      }
-    });
   }
 
   /**

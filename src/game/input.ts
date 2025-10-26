@@ -43,28 +43,3 @@ export function hitTestHammer(column: Column): { block: Block; isPerfect: boolea
 
   return null;
 }
-
-/**
- * 기존 hitTestBlock 함수 (화면 클릭 위치 기반)
- * 현재는 사용하지 않지만 유지
- */
-export function hitTestBlock(column: Column, worldX: number, worldY: number): Block | null {
-  for (let i = column.blocks.length - 1; i >= 0; i--) {
-    const block = column.blocks[i];
-
-    if (block.removed) continue;
-
-    const hitBox = createRect(
-      block.sprite.x - block.width / 2,
-      block.y - block.height / 2,
-      block.width,
-      block.height
-    );
-
-    if (pointInRect(worldX, worldY, hitBox)) {
-      return block;
-    }
-  }
-
-  return null;
-}
