@@ -6,6 +6,8 @@ export type GameState = 'BOOT' | 'MENU' | 'COUNTDOWN' | 'PLAYING' | 'RESULT';
 
 export type ScoreEventType = 'GOOD_PASS' | 'BAD_HIT' | 'BAD_PASS' | 'GOOD_HIT';
 
+export type HitAccuracy = 'PERFECT' | 'EXCELLENT' | 'GOOD' | 'NOT_BAD';
+
 export interface Block {
   id: number;
   type: BlockType;

@@ -64,6 +64,58 @@ export function createColumn(assets: GameAssets, _container: PIXI.Container): Co
 }
 
 /**
+ * 초기 블럭으로 화면 채우기
+ */
+export function fillInitialBlocks(
+  column: Column,
+  config: GameConfig,
+  assets: GameAssets,
+  container: PIXI.Container
+): void {
+  if (!blockPool) return;
+
+  const LOGICAL_HEIGHT = 960;
+
+  // 화면 위쪽부터 아래까지 블럭으로 채우기
+  // -SPAWN_MARGIN부터 LOGICAL_HEIGHT까지
+  let currentY = -SPAWN_MARGIN + BLOCK_HEIGHT / 2;
+
+  while (currentY < LOGICAL_HEIGHT + BLOCK_HEIGHT) {
+    const block = blockPool.acquire();
+
+    // 블럭 타입 결정 (불량 확률)
+    let type: BlockType = chance(config.badRate) ? 'BAD' : 'GOOD';
+
+    // 연속 3회 동일 타입 방지
+    if (lastBlockTypes.length >= 2 && lastBlockTypes[0] === type && lastBlockTypes[1] === type) {
+      type = type === 'GOOD' ? 'BAD' : 'GOOD';
+    }
+
+    lastBlockTypes.unshift(type);
+    if (lastBlockTypes.length > 2) {
+      lastBlockTypes.pop();
+    }
+
+    block.id = blockIdCounter++;
+    block.type = type;
+    block.y = currentY;
+    block.sprite.texture = type === 'GOOD' ? assets.blockGood : assets.blockBad;
+    block.sprite.x = BLOCK_WIDTH / 2 + 210;
+    block.sprite.y = block.y;
+    block.sprite.visible = true;
+    block.removed = false;
+
+    column.blocks.push(block);
+    container.addChild(block.sprite);
+
+    currentY += BLOCK_HEIGHT;
+  }
+
+  // spawnCursor를 가장 위 블럭 위로 설정
+  column.spawnCursorY = currentY - BLOCK_HEIGHT;
+}
+
+/**
  * 컬럼 이동 (스크롤)
  */
 export function moveColumn(column: Column, dy: number): void {

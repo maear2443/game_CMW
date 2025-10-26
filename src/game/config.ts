@@ -19,6 +19,17 @@ export const HAMMER_Y = LOGICAL_HEIGHT - 250; // 하단에서 250px 위
 // 정확도 판정 (블럭 중심에서의 거리 비율)
 export const PERFECT_HIT_RATIO = 0.5;  // 블럭 반경의 50% 이내
 
+// 속도 배수 (1x ~ 5x)
+let speedMultiplier = 1.0;
+
+export function getSpeedMultiplier(): number {
+  return speedMultiplier;
+}
+
+export function setSpeedMultiplier(multiplier: number): void {
+  speedMultiplier = Math.max(1.0, Math.min(5.0, multiplier));
+}
+
 // 콤보 보너스
 export const COMBO_TIERS = [
   { threshold: 5, bonus: 5 },

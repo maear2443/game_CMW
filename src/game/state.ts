@@ -1,10 +1,11 @@
 import * as PIXI from 'pixi.js';
 import { GameState, Column, ScoreState, GameConfig, GameAssets } from './types';
-import { GAME_DURATION, SAFE_LINE_Y, difficultyAt, BLOCK_WIDTH, BLOCK_HEIGHT } from './config';
+import { GAME_DURATION, SAFE_LINE_Y, difficultyAt, BLOCK_WIDTH, BLOCK_HEIGHT, getSpeedMultiplier } from './config';
 import { initRng } from '@/engine/rng';
 import { app, gameContainer } from '@/engine/app';
 import {
   createColumn,
+  fillInitialBlocks,
   moveColumn,
   needSpawn,
   spawnBlock,
@@ -182,6 +183,9 @@ export class GameController {
     // 컬럼 생성
     this.column = createColumn(this.assets, this.gameLayer);
 
+    // 초기 블럭으로 화면 채우기
+    fillInitialBlocks(this.column, this.config, this.assets, this.gameLayer);
+
     // HUD 생성
     this.hud = new HUD();
     this.uiLayer.addChild(this.hud.getContainer());
@@ -227,13 +231,61 @@ export class GameController {
   }
 
   /**
-   * 망치 타격 애니메이션
+   * 타겟 및 망치 타격 애니메이션
+   * 1. 타겟이 위에서 망치 위치로 내려옴
+   * 2. 망치가 옆에서 들어와서 블럭을 타격
    */
   private animateHammer(): void {
     if (!this.hammerMarker) return;
 
-    const originalY = HAMMER_Y;
-    const downDistance = 30;
+    // 1단계: 타겟이 위→아래로 이동
+    const startY = 150;  // 화면 상단에서 시작
+    const targetY = HAMMER_Y;
+    const dropDuration = 200; // ms
+    const dropStartTime = performance.now();
+
+    const dropAnimate = () => {
+      const elapsed = performance.now() - dropStartTime;
+      const progress = Math.min(elapsed / dropDuration, 1);
+
+      // easeInQuad로 가속하며 떨어짐
+      const t = progress * progress;
+      this.hammerMarker!.y = startY + (targetY - startY) * t;
+
+      if (progress < 1) {
+        requestAnimationFrame(dropAnimate);
+      } else {
+        // 2단계: 망치가 옆에서 들어와 타격
+        this.animateHammerStrike();
+      }
+    };
+
+    // 타겟을 시작 위치로 이동
+    this.hammerMarker.y = startY;
+    requestAnimationFrame(dropAnimate);
+  }
+
+  /**
+   * 망치가 옆에서 들어와서 타격하는 애니메이션
+   */
+  private animateHammerStrike(): void {
+    if (!this.hammerMarker) return;
+
+    // 망치 스프라이트 생성 (간단한 사각형)
+    const hammer = new PIXI.Graphics();
+    hammer.beginFill(0x8b4513); // 갈색
+    hammer.drawRect(0, 0, 80, 30);
+    hammer.endFill();
+    hammer.beginFill(0x696969); // 회색 (망치 헤드)
+    hammer.drawRect(60, -10, 40, 50);
+    hammer.endFill();
+
+    hammer.x = -120; // 화면 왼쪽 밖에서 시작
+    hammer.y = HAMMER_Y - 15;
+    this.gameLayer.addChild(hammer);
+
+    const startX = -120;
+    const targetX = HAMMER_X - 40;
     const duration = 150; // ms
     const startTime = performance.now();
 
@@ -242,19 +294,20 @@ export class GameController {
       const progress = Math.min(elapsed / duration, 1);
 
       if (progress < 0.5) {
-        // 내려가기
+        // 들어가기 (빠르게)
         const t = progress * 2;
-        this.hammerMarker!.y = originalY + downDistance * this.easeOutQuad(t);
+        hammer.x = startX + (targetX - startX) * this.easeOutQuad(t);
       } else {
-        // 올라오기
+        // 나가기 (빠르게)
         const t = (progress - 0.5) * 2;
-        this.hammerMarker!.y = originalY + downDistance * (1 - this.easeOutQuad(t));
+        hammer.x = targetX - (targetX - startX) * this.easeOutQuad(t);
       }
 
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        this.hammerMarker!.y = originalY;
+        // 애니메이션 완료 후 망치 제거
+        this.gameLayer.removeChild(hammer);
       }
     };
 
@@ -282,15 +335,28 @@ export class GameController {
 
       if (!result) return;
 
-      const { block, isPerfect } = result;
+      const { block, accuracy } = result;
 
       if (block.type === 'BAD') {
         // 불량 블럭 제거 성공
         removeBlock(block, this.column);
 
-        // 정확도에 따라 점수 차등 지급
-        const baseScore = this.config.s2BadHit;
-        const scoreDelta = isPerfect ? baseScore : Math.floor(baseScore / 2);
+        // 정확도에 따라 점수 차등 지급 (8/6/4/2)
+        let scoreDelta: number;
+        switch (accuracy) {
+          case 'PERFECT':
+            scoreDelta = 8;
+            break;
+          case 'EXCELLENT':
+            scoreDelta = 6;
+            break;
+          case 'GOOD':
+            scoreDelta = 4;
+            break;
+          case 'NOT_BAD':
+            scoreDelta = 2;
+            break;
+        }
 
         this.scoreState.score += scoreDelta;
         this.scoreState.badRemoved++;
@@ -302,11 +368,11 @@ export class GameController {
           this.scoreState.maxCombo = this.scoreState.combo;
         }
 
-        playHitSound(isPerfect);
-        this.showHitPop(isPerfect, scoreDelta, 0x00ff00);
+        playHitSound(accuracy === 'PERFECT');
+        this.showHitPop(accuracy, scoreDelta, 0x00ff00);
 
         // PERFECT 타격 시 파티클 이펙트
-        if (isPerfect) {
+        if (accuracy === 'PERFECT') {
           this.showParticles(HAMMER_X, HAMMER_Y);
         }
       } else {
@@ -314,7 +380,7 @@ export class GameController {
         removeBlock(block, this.column);
         const scoreDelta = applyScore(this.scoreState, 'GOOD_HIT', this.config);
         playSfx('hit_miss');
-        this.showHitPop(false, scoreDelta, 0xff0000);
+        this.showHitPop('NOT_BAD', scoreDelta, 0xff0000);
         this.screenFlashRed();
       }
     };
@@ -326,14 +392,42 @@ export class GameController {
   }
 
   /**
-   * 히트 팝업 표시 (PERFECT/GOOD + 점수)
+   * 히트 팝업 표시 (PERFECT/EXCELLENT/GOOD/NOT_BAD + 점수)
    */
-  private showHitPop(isPerfect: boolean, score: number, color: number): void {
+  private showHitPop(accuracy: import('./types').HitAccuracy, score: number, color: number): void {
+    // 판정 텍스트 및 색상 설정
+    let text: string;
+    let fontSize: number;
+    let textColor: number;
+
+    switch (accuracy) {
+      case 'PERFECT':
+        text = 'PERFECT!';
+        fontSize = 48;
+        textColor = 0xffd700; // 금색
+        break;
+      case 'EXCELLENT':
+        text = 'EXCELLENT!';
+        fontSize = 42;
+        textColor = 0x00ffff; // 시안
+        break;
+      case 'GOOD':
+        text = 'GOOD';
+        fontSize = 36;
+        textColor = 0x00ff00; // 초록
+        break;
+      case 'NOT_BAD':
+        text = 'NOT BAD';
+        fontSize = 32;
+        textColor = 0xffffff; // 하양
+        break;
+    }
+
     // 판정 텍스트
-    const judgement = new PIXI.Text(isPerfect ? 'PERFECT!' : 'GOOD', {
+    const judgement = new PIXI.Text(text, {
       fontFamily: 'Arial, sans-serif',
-      fontSize: isPerfect ? 48 : 36,
-      fill: isPerfect ? 0xffd700 : 0xffffff,
+      fontSize,
+      fill: textColor,
       fontWeight: 'bold',
     });
     judgement.anchor.set(0.5);
@@ -464,8 +558,8 @@ export class GameController {
     // 난이도 갱신
     this.config = difficultyAt(this.elapsedMs);
 
-    // 스크롤
-    const dy = (this.config.speedPxPerSec * dt) / 1000;
+    // 스크롤 (속도 배수 적용)
+    const dy = (this.config.speedPxPerSec * dt * getSpeedMultiplier()) / 1000;
     moveColumn(this.column, dy);
 
     // 스폰

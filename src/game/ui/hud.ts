@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { ScoreState } from '../types';
-import { LOGICAL_WIDTH, SAFE_LINE_Y } from '../config';
+import { LOGICAL_WIDTH, SAFE_LINE_Y, setSpeedMultiplier, getSpeedMultiplier } from '../config';
 
 export class HUD {
   private container: PIXI.Container;
@@ -9,6 +9,7 @@ export class HUD {
   private comboText: PIXI.Text;
   private safeLine: PIXI.Graphics;
   private warningFlash: boolean = false;
+  private speedButtons: Array<{ button: PIXI.Graphics; text: PIXI.Text; speed: number }> = [];
 
   constructor() {
     this.container = new PIXI.Container();
@@ -53,6 +54,76 @@ export class HUD {
     this.safeLine = new PIXI.Graphics();
     this.drawSafeLine(0xff0000, 1);
     this.container.addChild(this.safeLine);
+
+    // 속도 조절 버튼들 (1x, 2x, 3x, 4x, 5x)
+    this.createSpeedButtons();
+  }
+
+  private createSpeedButtons(): void {
+    const speeds = [1, 2, 3, 4, 5];
+    const buttonWidth = 50;
+    const buttonHeight = 35;
+    const spacing = 10;
+    const startX = LOGICAL_WIDTH / 2 - (speeds.length * (buttonWidth + spacing)) / 2;
+    const startY = 120;
+
+    speeds.forEach((speed, index) => {
+      // 버튼 배경
+      const button = new PIXI.Graphics();
+      const x = startX + index * (buttonWidth + spacing);
+
+      // 클릭 영역
+      button.eventMode = 'static';
+      button.cursor = 'pointer';
+      button.hitArea = new PIXI.Rectangle(0, 0, buttonWidth, buttonHeight);
+
+      // 텍스트
+      const text = new PIXI.Text(`${speed}x`, {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: 20,
+        fill: 0xffffff,
+        fontWeight: 'bold',
+      });
+      text.anchor.set(0.5);
+      text.x = buttonWidth / 2;
+      text.y = buttonHeight / 2;
+
+      button.x = x;
+      button.y = startY;
+      button.addChild(text);
+
+      // 클릭 이벤트
+      button.on('pointerdown', () => {
+        setSpeedMultiplier(speed);
+        this.updateSpeedButtons();
+      });
+
+      this.speedButtons.push({ button, text, speed });
+      this.container.addChild(button);
+    });
+
+    this.updateSpeedButtons();
+  }
+
+  private updateSpeedButtons(): void {
+    const currentSpeed = getSpeedMultiplier();
+
+    this.speedButtons.forEach(({ button, speed }) => {
+      button.clear();
+
+      if (speed === currentSpeed) {
+        // 선택된 버튼
+        button.beginFill(0x4ecdc4);
+        button.lineStyle(2, 0xffffff);
+      } else {
+        // 선택되지 않은 버튼
+        button.beginFill(0x2a2a3e);
+        button.lineStyle(2, 0x4ecdc4);
+      }
+
+      button.drawRoundedRect(0, 0, 50, 35, 8);
+      button.endFill();
+    });
   }
 
   private drawSafeLine(color: number, alpha: number): void {
