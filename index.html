@@ -83,7 +83,11 @@
     <div id="loading">
       <div class="spinner"></div>
       <p>Loading...</p>
+      <p id="loading-percent" style="font-size: 14px; margin-top: 10px; color: #4ecdc4;">0%</p>
     </div>
+
+    <!-- Module preload for faster loading -->
+    <link rel="modulepreload" href="/src/main.ts" />
 
     <script type="module" src="/src/main.ts"></script>
 

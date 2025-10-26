@@ -2,21 +2,36 @@ import { initApp } from './engine/app';
 import { GameController } from './game/state';
 
 /**
+ * 로딩 진행률 업데이트
+ */
+function updateLoadingProgress(percent: number): void {
+  const percentEl = document.getElementById('loading-percent');
+  if (percentEl) {
+    percentEl.textContent = `${Math.round(percent)}%`;
+  }
+}
+
+/**
  * 메인 진입점
  */
 async function main() {
   try {
     console.log('게임 초기화 시작...');
+    updateLoadingProgress(10);
 
     // PixiJS 앱 초기화
+    updateLoadingProgress(30);
     await initApp();
     console.log('PixiJS 앱 초기화 완료!');
+    updateLoadingProgress(70);
 
     // 게임 컨트롤러 생성 및 시작
     const game = new GameController();
+    updateLoadingProgress(90);
     game.startMenu();
 
     console.log('Totem Drop 게임 시작!');
+    updateLoadingProgress(100);
 
     // 로딩 화면 제거
     if ((window as any).hideLoading) {
